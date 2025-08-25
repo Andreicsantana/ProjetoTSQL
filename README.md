@@ -38,5 +38,3 @@ O projeto é desenvolvido utilizando **T-SQL** para consultas e análise de dado
 
 ## Tecnologias
 - **SQL Server / T-SQL**
-
-- 
