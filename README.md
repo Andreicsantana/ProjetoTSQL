@@ -37,4 +37,6 @@ O projeto é desenvolvido utilizando **T-SQL** para consultas e análise de dado
 - Se reinvestir todos os dividendos recebidos no último ano, qual seria o retorno total?
 
 ## Tecnologias
-- **SQL Server / T-SQL**  
+- **SQL Server / T-SQL**
+
+- 
