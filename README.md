@@ -1,4 +1,4 @@
-# Carteira de Investimentos Referencial - T-SQL
+# Carteira Referencial de Investimentos - T-SQL
 
 ## Descrição do Projeto
 Este projeto tem como objetivo criar uma **carteira de investimentos referencial** que permite aos usuários acompanhar o desempenho de uma seleção de ativos e tomar decisões mais informadas para suas próprias carteiras.  
