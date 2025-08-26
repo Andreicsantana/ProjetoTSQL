@@ -5,10 +5,10 @@ Este projeto tem como objetivo criar uma **carteira de investimentos referencial
 O projeto é desenvolvido utilizando **T-SQL** para consultas e análise de dados financeiros, contemplando informações sobre composição da carteira, desempenho histórico, indicadores fundamentalistas e simulações de cenários.
 
 ## Objetivos
-1. Fornecer uma visão completa da **composição da carteira**, incluindo ativos, pesos, setores e valores investidos.  
-2. Permitir análise de **desempenho histórico**, com valorização, comparativos com índices de mercado e dividendos recebidos.  
-3. Exibir **indicadores fundamentalistas** de cada ativo da carteira, como P/L, ROE e endividamento.  
-4. Realizar **simulações e cenários**, como impactos de variações de preço ou reinvestimento de dividendos.
+1. Composição da carteira: seleção de ativos de diferentes classes (ações, fundos imobiliários, renda fixa, entre outros), permitindo o estudo da diversificação e da alocação de recursos.
+2. Desempenho histórico: análise da rentabilidade dos ativos e da carteira como um todo em diferentes períodos de tempo, possibilitando a visualização de tendências e padrões.
+3. Indicadores fundamentalistas: integração de métricas como P/L, dividend yield, ROE, volatilidade e outros parâmetros que auxiliam na avaliação da atratividade e risco dos investimentos.
+4. Simulações de cenários: projeções e análises hipotéticas baseadas em diferentes condições de mercado (ex.: variação de taxa de juros, inflação, crises econômicas), permitindo avaliar a resiliência da carteira diante de eventos adversos.
 
 ## Perguntas que gostaríamos de responder
 
