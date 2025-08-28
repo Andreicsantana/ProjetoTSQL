@@ -47,9 +47,6 @@ O projeto é desenvolvido utilizando **T-SQL** para consultas e análise de dado
 - **Desempenho Histórico e Diário**  
   [B3 - ISE B3 Estatísticas Históricas](https://www.b3.com.br/pt_br/market-data-e-indices/indices/indices-de-sustentabilidade/indice-de-sustentabilidade-empresarial-ise-b3-estatisticas-historicas.htm)
 
-- **Indicadores Fundamentalistas**  
-  [Fundamentus](http://fundamentus.com.br/)
-
 - **DataSet Bovespa (site referencial)**  
   [Kaggle - Bovespa (dcampeao)](https://www.kaggle.com/datasets/dcampeao/bovespa)  
   [Kaggle - Ibovespa (lusfernandotorres)](https://www.kaggle.com/datasets/lusfernandotorres/ibovespa)
