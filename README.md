@@ -40,7 +40,7 @@ O projeto é desenvolvido utilizando **T-SQL** para consultas e análise de dado
 - **SQL Server / T-SQL**
 
 ## Gestão
-- **Trello:**https://trello.com/b/IvVcWZZp
+- Trello:https://trello.com/b/IvVcWZZp
 
 ## Links para Datasets
 
