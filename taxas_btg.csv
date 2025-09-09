@@ -1,0 +1,11 @@
+Produto;Taxa;Valor
+Renda Fixa;Taxa de custódia BTG;Zero
+Tesouro Direto;"Taxa de custódia BTG; Taxa de custódia B3";"Zero; 0,20%"
+Fundos de Investimentos;"Taxa de custódia BTG; Taxa de administração e performance";"Zero; De acordo com cada fundo"
+Previdência Privada;Taxa de carregamento na entrada e na saída;Zero
+Câmbio;Taxa de contrato;R$ 90,00
+COE;Taxa de custódia BTG;Zero
+Invest Flex;Taxa de juros;5,99%/mês
+Renda Variável;Taxa de custódia B3;Zero
+Criptoativos;"Taxa de custódia BTG; Taxa de corretagem";"Zero; 0,5%"
+BTG DOL;"Taxa de custódia BTG; Taxa de corretagem";"Zero; Regressiva"
