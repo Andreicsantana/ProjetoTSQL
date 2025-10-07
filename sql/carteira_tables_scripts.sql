@@ -1,13 +1,12 @@
-CREATE DATABASE CarteiraRef;
+CREATE DATABASE TsqlProject;
 GO
 
-USE CarteiraRef;
+USE TsqlProject;
 GO
 
 CREATE TABLE Setores (
     setor_id INT IDENTITY(1,1) PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    descricao VARCHAR(255)
+    nome NVARCHAR(100) NOT NULL
 );
 
 CREATE TABLE Empresas (
