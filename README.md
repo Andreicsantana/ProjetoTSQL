@@ -74,3 +74,7 @@ Este projeto tem como objetivo criar uma **Carteira Referencial de Investimentos
 🔹 [B3 - Mercado à Vista (Cotações Históricas)](https://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/mercado-a-vista/cotacoes-historicas/)
 
 ---
+
+## Importando csv para o container do docker
+
+docker cp "C:\Users\teste\csvs" sqlserver:/var/opt/mssql/data/

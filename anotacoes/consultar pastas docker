@@ -1,0 +1,66 @@
+Como o SQL roda em Linux dentro do container, tu pode **abrir um terminal interativo** dentro dele e usar comandos normais do Linux (`ls`, `cd`, `find`, etc.).
+
+---
+
+### 🧩 1. Abrir terminal dentro do container
+
+Roda no teu **CMD do Windows**:
+
+```bash
+docker exec -it sqlserver bash
+```
+
+Isso vai te jogar dentro do shell do container — vai aparecer algo tipo:
+
+```
+root@a6fcd22dbb69:/#
+```
+
+---
+
+### 📂 2. Listar os arquivos/pastas
+
+Agora, dentro do container, tu pode usar:
+
+* Pra ver tudo no diretório atual:
+
+  ```bash
+  ls
+  ```
+* Pra ver com detalhes:
+
+  ```bash
+  ls -l
+  ```
+* Pra ver tudo, incluindo ocultos:
+
+  ```bash
+  ls -la
+  ```
+* Pra entrar em uma pasta (exemplo: `/var/opt/mssql/data`):
+
+  ```bash
+  cd /var/opt/mssql/data
+  ls -lh
+  ```
+
+---
+
+### 🔎 3. Procurar um arquivo específico (ex: `.csv`)
+
+```bash
+find /var/opt/mssql -type f -name "*.csv"
+```
+
+---
+
+### 💡 4. Sair do container
+
+Quando terminar:
+
+```bash
+exit
+```
+
+---
+

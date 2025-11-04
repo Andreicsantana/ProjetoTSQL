@@ -787,3 +787,75 @@ BEGIN
     END CATCH;
 END;
 GO
+
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'EMPRESAS',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/empresas.csv';
+
+
+EXEC usp_ImportarDataset
+    @DatasetType    = 'ISEE_CARTEIRA',
+    @FilePath       = '/var/opt/mssql/data/csvs_utf8/ISEE3Prev_9-2025.csv',
+    @CarteiraNome   = 'ISEE Prévia Set-Dez 2025',
+    @DataReferencia = '2025-09-01';
+
+
+EXEC usp_ImportarDataset
+    @DatasetType = 'ISEE_EVOLUCAO_MENSAL',
+    @FilePath    = '/var/opt/mssql/data/csvs_utf8/Evolucao_Mensal.csv',
+    @TargetTicker = 'ISEE';
+
+
+EXEC usp_ImportarDataset
+    @DatasetType = 'ISEE_EVOLUCAO_DIARIA',
+    @FilePath    = '/var/opt/mssql/data/csvs_utf8/Evolucao_Diaria.csv',
+    @Ano         = 2025,
+    @TargetTicker = 'ISEE';
+
+
+EXEC usp_ImportarDataset
+    @DatasetType  = 'ATIVO_HISTORICO',
+    @FilePath     = '/var/opt/mssql/data/csvs_utf8_datasets_acoes/BBAS3 Dados Históricos.csv',
+    @TargetTicker = 'BBAS3';
+
+
+EXEC usp_ImportarDataset
+    @DatasetType = 'TAXA_CRESCIMENTO',
+    @FilePath    = '/var/opt/mssql/data/csvs_utf8/Taxa_Media_Crescimento.csv'
+
+
+
+
+
+select * from Setores
+select * from Empresas
+select * from Ativos
+
+select * from Ativos
+select * from Carteira_Definicao
+select * from Carteira
+
+select * from Desempenho_Historico
+select * from Ativos
+select * from Benchmarks
+
+select * from Cotacoes_Diarias
+select * from Ativos
+select * from Benchmarks
+
+select * from Ativos
+select * from Cotacoes_Diarias
+select * from Desempenho_Historico
+
+select * from Indicadores_Macroeconomicos
+
+Setores
+Empresas
+Ativos
+Carteira_Definicao
+Carteira
+Desempenho_Historico
+Benchmarks
+Cotacoes_Diarias
+Indicadores_Macroeconomicos

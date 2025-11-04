@@ -1,0 +1,59 @@
+Resumo das mudanças principais
+- `Carteira_Definicao` adicionada para versionar carteiras importadas; `Carteira` agora guarda quantidade teórica, peso em fração e FK para a definição.
+- Procedure `usp_ImportarDataset` (arquivo `sql/carteira_tables_scripts.sql`) orquestra o fluxo staging → limpeza → carga final para cada tipo de dataset.
+- A procedure normaliza números com vírgula/ponto, interpreta sufixos K/M/B, evita duplicatas via `MERGE` e atualiza `Ativos`/`Benchmarks` com os valores mais recentes.
+
+Checklist para executar a `usp_ImportarDataset`
+- Certifique-se de que o serviço SQL Server enxerga o caminho de cada CSV (permissões e montagem no container).
+- Ajuste o parâmetro `@FilePath` conforme a localização real do arquivo.
+- Execute os blocos abaixo apenas uma vez por arquivo ou sempre que houver atualização dos dados.
+
+Referência rápida de execuções
+
+| # | Objetivo | Comando base | Tabelas atualizadas |
+|---|----------|--------------|---------------------|
+| 1 | Empresas, setores e tickers |```
+EXEC usp_ImportarDataset
+   @DatasetType = 'EMPRESAS',
+   @FilePath    = 'C:\Repositorios\ProjetoTSQL\datasets\empresas.csv';
+```|`Setores`, `Empresas`, `Ativos` (atualiza setor quando vazio) |
+| 2 | Carteira ISEE |```
+EXEC usp_ImportarDataset
+   @DatasetType    = 'ISEE_CARTEIRA',
+   @FilePath       = 'C:\Repositorios\ProjetoTSQL\datasets\ISEE3Prev_9-2025.csv',
+   @CarteiraNome   = 'ISEE Prévia Set-Dez 2025',
+   @DataReferencia = '2025-09-01';
+```|Garante ticker em `Ativos`, cria/atualiza `Carteira_Definicao`, substitui itens na tabela `Carteira` |
+| 3 | Evolução mensal do índice |```
+EXEC usp_ImportarDataset
+   @DatasetType  = 'ISEE_EVOLUCAO_MENSAL',
+   @FilePath     = 'C:\Repositorios\ProjetoTSQL\datasets\Evolucao_Mensal.csv',
+   @TargetTicker = 'ISEE';
+```|`Desempenho_Historico`, `Ativos.preco_atual`, `Benchmarks` (insere/atualiza) |
+| 4 | Evolução diária do índice |```
+EXEC usp_ImportarDataset
+   @DatasetType  = 'ISEE_EVOLUCAO_DIARIA',
+   @FilePath     = 'C:\Repositorios\ProjetoTSQL\datasets\Evolucao_Diaria.csv',
+   @Ano          = 2025,
+   @TargetTicker = 'ISEE';
+```|`Cotacoes_Diarias`, `Ativos.preco_atual`, `Benchmarks` |
+| 5 | Histórico de preço de um ativo/fundo |```
+EXEC usp_ImportarDataset
+   @DatasetType  = 'ATIVO_HISTORICO',
+   @FilePath     = 'C:\Repositorios\ProjetoTSQL\datasets\dataset acoes\BBAS3 Dados Históricos.csv',
+   @TargetTicker = 'BBAS3';
+```|`Ativos` (garante ticker e último preço), `Cotacoes_Diarias`, `Desempenho_Historico` |
+| 6 | Taxa média de crescimento |```
+EXEC usp_ImportarDataset
+   @DatasetType = 'TAXA_CRESCIMENTO',
+   @FilePath    = 'C:\Repositorios\ProjetoTSQL\datasets\Taxa_Media_Crescimento.csv';
+```|`Indicadores_Macroeconomicos` |
+
+Depois de rodar todos os blocos acima, as tabelas com dados esperados são: `Setores`, `Empresas`, `Ativos`, `Carteira_Definicao`, `Carteira`, `Desempenho_Historico`, `Benchmarks`, `Cotacoes_Diarias` e `Indicadores_Macroeconomicos`.
+
+Próximos passos recomendados
+- Confirmar se todas as cargas completaram (`SELECT COUNT(*)` nas tabelas alvo).
+- Avaliar criação de índices e visões para consultas analíticas frequentes.
+- Exibir os pesos em percentual ao consultar `Carteira` multiplicando o campo `peso` por 100 quando necessário.
+
+Made changes.
