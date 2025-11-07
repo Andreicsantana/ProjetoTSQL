@@ -1,0 +1,32 @@
+EXEC usp_ImportarDataset
+     @DatasetType  = 'BENCHMARK_HISTORICO',
+     @FilePath     = '/var/opt/mssql/data/csvs_utf8/bvsp.csv',
+     @TargetTicker = 'BVSP';
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'COTAHIST_MULTI',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/cotahist1m.csv';
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'COTAHIST_MULTI',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/cotahist(2)4m.csv';
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'IPCA_MENSAL',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/ipca.csv';
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'PIB_PER_CAPITA',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/pib-per-capita-r.csv';
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'PIB_VARIACAO_TRIMESTRAL',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/variação-do-pib.csv';
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'SELIC_META',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/meta-para-a-taxa-selic.csv';
+
+EXEC usp_ImportarDataset
+     @DatasetType = 'VOLATILIDADE_MENSAL',
+     @FilePath    = '/var/opt/mssql/data/csvs_utf8/Volatilidade_Mensal.csv';

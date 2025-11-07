@@ -1,59 +1,141 @@
-Resumo das mudanças principais
-- `Carteira_Definicao` adicionada para versionar carteiras importadas; `Carteira` agora guarda quantidade teórica, peso em fração e FK para a definição.
-- Procedure `usp_ImportarDataset` (arquivo `sql/carteira_tables_scripts.sql`) orquestra o fluxo staging → limpeza → carga final para cada tipo de dataset.
-- A procedure normaliza números com vírgula/ponto, interpreta sufixos K/M/B, evita duplicatas via `MERGE` e atualiza `Ativos`/`Benchmarks` com os valores mais recentes.
+Guia rápido
+- `Carteira_Definicao` versiona cada carteira importada; `Carteira` agora armazena peso em fração, quantidade teórica e referência para a definição.
+- A procedure `usp_ImportarDataset` (arquivo `sql/carteira_tables_scripts.sql`) cuida da etapa staging → limpeza → carga final para cada tipo de CSV suportado.
+- Conversões numéricas (vírgula/ponto, sufixos K/M/B), deduplicação com `MERGE` e atualização de `Ativos`/`Benchmarks` já estão embutidas.
 
-Checklist para executar a `usp_ImportarDataset`
-- Certifique-se de que o serviço SQL Server enxerga o caminho de cada CSV (permissões e montagem no container).
-- Ajuste o parâmetro `@FilePath` conforme a localização real do arquivo.
-- Execute os blocos abaixo apenas uma vez por arquivo ou sempre que houver atualização dos dados.
+Passo a passo para importar um CSV
+1. Copiar o arquivo para uma pasta montada no container (ex.: `/var/opt/mssql/data/csvs_utf8`).
+2. Identificar o `@DatasetType` adequado na tabela de referência abaixo e anotar parâmetros obrigatórios extras (`@CarteiraNome`, `@Ano`, etc.).
+3. Montar o caminho no formato Linux (se estiver no Windows, confirme a montagem com as notas "consultar pastas docker").
+4. Preparar o comando usando o template:
+   ```sql
+   EXEC usp_ImportarDataset
+        @DatasetType = '<TIPO>',
+        @FilePath    = '/var/opt/mssql/data/<pasta>/<arquivo.csv>',
+        -- demais parâmetros somente se exigidos pelo tipo
+        @CarteiraNome   = NULL,
+        @DataReferencia = NULL,
+        @TargetTicker   = NULL,
+        @Ano            = NULL;
+   ```
+5. Executar o `EXEC` no SSMS, Azure Data Studio ou `sqlcmd` conectado ao banco `TsqlProject`.
+6. Validar o carregamento com `SELECT COUNT(*)` ou `SELECT TOP (10)` nas tabelas listadas para o tipo.
+7. Repetir para os demais arquivos atualizados, garantindo que cada CSV seja processado uma vez por ciclo.
 
-Referência rápida de execuções
+Mapa dos tipos suportados
 
-| # | Objetivo | Comando base | Tabelas atualizadas |
-|---|----------|--------------|---------------------|
-| 1 | Empresas, setores e tickers |```
-EXEC usp_ImportarDataset
-   @DatasetType = 'EMPRESAS',
-   @FilePath    = 'C:\Repositorios\ProjetoTSQL\datasets\empresas.csv';
-```|`Setores`, `Empresas`, `Ativos` (atualiza setor quando vazio) |
-| 2 | Carteira ISEE |```
-EXEC usp_ImportarDataset
-   @DatasetType    = 'ISEE_CARTEIRA',
-   @FilePath       = 'C:\Repositorios\ProjetoTSQL\datasets\ISEE3Prev_9-2025.csv',
-   @CarteiraNome   = 'ISEE Prévia Set-Dez 2025',
-   @DataReferencia = '2025-09-01';
-```|Garante ticker em `Ativos`, cria/atualiza `Carteira_Definicao`, substitui itens na tabela `Carteira` |
-| 3 | Evolução mensal do índice |```
-EXEC usp_ImportarDataset
-   @DatasetType  = 'ISEE_EVOLUCAO_MENSAL',
-   @FilePath     = 'C:\Repositorios\ProjetoTSQL\datasets\Evolucao_Mensal.csv',
-   @TargetTicker = 'ISEE';
-```|`Desempenho_Historico`, `Ativos.preco_atual`, `Benchmarks` (insere/atualiza) |
-| 4 | Evolução diária do índice |```
-EXEC usp_ImportarDataset
-   @DatasetType  = 'ISEE_EVOLUCAO_DIARIA',
-   @FilePath     = 'C:\Repositorios\ProjetoTSQL\datasets\Evolucao_Diaria.csv',
-   @Ano          = 2025,
-   @TargetTicker = 'ISEE';
-```|`Cotacoes_Diarias`, `Ativos.preco_atual`, `Benchmarks` |
-| 5 | Histórico de preço de um ativo/fundo |```
-EXEC usp_ImportarDataset
-   @DatasetType  = 'ATIVO_HISTORICO',
-   @FilePath     = 'C:\Repositorios\ProjetoTSQL\datasets\dataset acoes\BBAS3 Dados Históricos.csv',
-   @TargetTicker = 'BBAS3';
-```|`Ativos` (garante ticker e último preço), `Cotacoes_Diarias`, `Desempenho_Historico` |
-| 6 | Taxa média de crescimento |```
-EXEC usp_ImportarDataset
-   @DatasetType = 'TAXA_CRESCIMENTO',
-   @FilePath    = 'C:\Repositorios\ProjetoTSQL\datasets\Taxa_Media_Crescimento.csv';
-```|`Indicadores_Macroeconomicos` |
+| Tipo | Quando usar | Parâmetros extras | Tabelas afetadas |
+|------|-------------|-------------------|------------------|
+| `EMPRESAS` | Cadastro de setores, empresas e tickers | nenhum | `Setores`, `Empresas`, `Ativos` (preenche setor vazio) |
+| `ISEE_CARTEIRA` | Arquivo da carteira teorica ISEE | `@CarteiraNome`, `@DataReferencia` | `Ativos`, `Carteira_Definicao`, `Carteira` |
+| `ISEE_EVOLUCAO_MENSAL` | Serie mensal do indice | opcional `@TargetTicker` (padrao `ISEE`) | `Desempenho_Historico`, `Ativos`, `Benchmarks` |
+| `ISEE_EVOLUCAO_DIARIA` | Serie diaria do indice | `@Ano`, opcional `@TargetTicker` | `Cotacoes_Diarias`, `Ativos`, `Benchmarks` |
+| `ATIVO_HISTORICO` | Historico diario de um ativo/fundo | `@TargetTicker` | `Ativos`, `Cotacoes_Diarias`, `Desempenho_Historico` |
+| `TAXA_CRESCIMENTO` | Indicadores macro (taxa media) | nenhum | `Indicadores_Macroeconomicos` |
+| `BENCHMARK_HISTORICO` | Historico diario de indice/benchmark (ex.: BVSP) | `@TargetTicker` | `Ativos`, `Cotacoes_Diarias`, `Desempenho_Historico`, `Benchmarks` |
+| `COTAHIST_MULTI` | Arquivo com varios tickers (cotas diar.) | nenhum | `Ativos`, `Cotacoes_Diarias`, `Desempenho_Historico` |
+| `IPCA_MENSAL` | Serie mensal do IPCA | nenhum | `Indicadores_Macroeconomicos` |
+| `PIB_PER_CAPITA` | Serie anual do PIB per capita | nenhum | `Indicadores_Macroeconomicos` |
+| `PIB_VARIACAO_TRIMESTRAL` | Serie trimestral de variacao do PIB | nenhum | `Indicadores_Macroeconomicos` |
+| `SELIC_META` | Meta diaria da taxa Selic | nenhum | `Indicadores_Macroeconomicos` |
+| `VOLATILIDADE_MENSAL` | Volatilidade mensal do ISEE | nenhum | `Indicadores_Macroeconomicos` |
 
-Depois de rodar todos os blocos acima, as tabelas com dados esperados são: `Setores`, `Empresas`, `Ativos`, `Carteira_Definicao`, `Carteira`, `Desempenho_Historico`, `Benchmarks`, `Cotacoes_Diarias` e `Indicadores_Macroeconomicos`.
+Exemplos práticos
 
-Próximos passos recomendados
-- Confirmar se todas as cargas completaram (`SELECT COUNT(*)` nas tabelas alvo).
-- Avaliar criação de índices e visões para consultas analíticas frequentes.
-- Exibir os pesos em percentual ao consultar `Carteira` multiplicando o campo `peso` por 100 quando necessário.
+1. Empresas
+   ```sql
+   EXEC usp_ImportarDataset
+        @DatasetType = 'EMPRESAS',
+        @FilePath    = '/var/opt/mssql/data/csvs_utf8/empresas.csv';
+   ```
+
+2. Carteira ISEE
+   ```sql
+   EXEC usp_ImportarDataset
+        @DatasetType    = 'ISEE_CARTEIRA',
+        @FilePath       = '/var/opt/mssql/data/csvs_utf8/ISEE3Prev_9-2025.csv',
+      @CarteiraNome   = 'ISEE Previa Set-Dez 2025',
+        @DataReferencia = '2025-09-01';
+   ```
+
+3. Evolucao diaria do indice
+   ```sql
+   EXEC usp_ImportarDataset
+        @DatasetType  = 'ISEE_EVOLUCAO_DIARIA',
+        @FilePath     = '/var/opt/mssql/data/csvs_utf8/Evolucao_Diaria.csv',
+        @Ano          = 2025,
+        @TargetTicker = 'ISEE';
+   ```
+
+4. Historico de ativo
+   ```sql
+   EXEC usp_ImportarDataset
+        @DatasetType  = 'ATIVO_HISTORICO',
+        @FilePath     = '/var/opt/mssql/data/csvs_utf8_datasets_acoes/BBAS3 Dados Históricos.csv',
+        @TargetTicker = 'BBAS3';
+   ```
+
+5. Historico do IBOVESPA (benchmark)
+   ```sql
+   EXEC usp_ImportarDataset
+      @DatasetType  = 'BENCHMARK_HISTORICO',
+      @FilePath     = '/var/opt/mssql/data/csvs_utf8/bvsp.csv',
+      @TargetTicker = 'BVSP';
+   ```
+
+6. Diversos tickers do cotahist
+   ```sql
+   EXEC usp_ImportarDataset
+      @DatasetType = 'COTAHIST_MULTI',
+      @FilePath    = '/var/opt/mssql/data/csvs_utf8/cotahist1m.csv';
+   ```
+
+7. IPCA mensal
+   ```sql
+   EXEC usp_ImportarDataset
+      @DatasetType = 'IPCA_MENSAL',
+      @FilePath    = '/var/opt/mssql/data/csvs_utf8/ipca.csv';
+   ```
+
+8. PIB per capita
+   ```sql
+   EXEC usp_ImportarDataset
+      @DatasetType = 'PIB_PER_CAPITA',
+      @FilePath    = '/var/opt/mssql/data/csvs_utf8/pib-per-capita-r.csv';
+   ```
+
+9. Variacao trimestral do PIB
+   ```sql
+   EXEC usp_ImportarDataset
+      @DatasetType = 'PIB_VARIACAO_TRIMESTRAL',
+      @FilePath    = '/var/opt/mssql/data/csvs_utf8/variacao-do-pib.csv';
+   ```
+
+10. Meta da taxa Selic
+    ```sql
+    EXEC usp_ImportarDataset
+       @DatasetType = 'SELIC_META',
+       @FilePath    = '/var/opt/mssql/data/csvs_utf8/meta-para-a-taxa-selic.csv';
+    ```
+
+11. Volatilidade mensal do ISEE
+    ```sql
+    EXEC usp_ImportarDataset
+       @DatasetType = 'VOLATILIDADE_MENSAL',
+       @FilePath    = '/var/opt/mssql/data/csvs_utf8/Volatilidade_Mensal.csv';
+    ```
+
+Checklist pós-execução
+- `SELECT COUNT(*)` em cada tabela alvo para confirmar registros novos.
+- `SELECT TOP (5) * FROM Carteira ORDER BY carteira_id DESC` para verificar última carteira.
+- `SELECT TOP (1) preco_atual FROM Ativos WHERE nome = '<ticker>' ORDER BY atualizado_em DESC` (se houver coluna de auditoria).
+- Guardar o comando executado e o arquivo processado em um log manual para evitar duplicidades.
+
+Preciso de um novo tipo?
+- Compare o layout do CSV com os blocos existentes da procedure.
+- Se não encaixar, replique o padrão: criar `#Stage`, `BULK INSERT`, limpar dados e inserir nas tabelas desejadas, terminando com `RETURN`.
+- Documente o novo tipo nesta anotação com parâmetros e tabelas impactadas.
+
+Observacao: o arquivo `taxas_btg.csv` contem descricoes textuais de taxas sem vinculacao a uma carteira, por isso ainda nao ha destino nas tabelas atuais.
 
 Made changes.

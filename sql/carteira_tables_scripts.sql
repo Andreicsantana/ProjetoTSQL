@@ -1,233 +1,6 @@
-IF DB_ID('TsqlProject') IS NULL
-BEGIN
-    CREATE DATABASE TsqlProject;
-END;
-GO
-
 USE TsqlProject;
 GO
 
-CREATE TABLE Setores (
-    setor_id INT IDENTITY(1,1) PRIMARY KEY,
-    nome NVARCHAR(100) NOT NULL
-);
-
-CREATE TABLE Empresas (
-    empresa_id INT IDENTITY(1,1) PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    cnpj VARCHAR(20),
-    setor_id INT NOT NULL,
-    CONSTRAINT fk_empresa_setor FOREIGN KEY (setor_id)
-        REFERENCES Setores(setor_id)
-);
-
-CREATE TABLE Ativos (
-    ativo_id INT IDENTITY(1,1) PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    setor VARCHAR(100),
-    preco_atual DECIMAL(18,2)
-);
-
-CREATE TABLE Carteira_Definicao (
-    carteira_definicao_id INT IDENTITY(1,1) PRIMARY KEY,
-    nome VARCHAR(200) NOT NULL,
-    data_referencia DATE NOT NULL,
-    origem VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE Carteira (
-    carteira_id INT IDENTITY(1,1) PRIMARY KEY,
-    carteira_definicao_id INT NOT NULL,
-    ativo_id INT NOT NULL,
-    quantidade_teorica DECIMAL(18,4),
-    peso DECIMAL(10,4),
-    valor_investido DECIMAL(18,4),
-    CONSTRAINT fk_carteira_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id),
-    CONSTRAINT fk_carteira_definicao FOREIGN KEY (carteira_definicao_id)
-        REFERENCES Carteira_Definicao(carteira_definicao_id)
-);
-
-CREATE TABLE Desempenho_Historico (
-    ativo_id INT NOT NULL,
-    data DATE NOT NULL,
-    preco DECIMAL(18,2),
-    PRIMARY KEY (ativo_id, data),
-    CONSTRAINT fk_desempenho_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Dividendos (
-    ativo_id INT NOT NULL,
-    data_pagamento DATE NOT NULL,
-    valor DECIMAL(18,2),
-    PRIMARY KEY (ativo_id, data_pagamento),
-    CONSTRAINT fk_dividendo_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Indicadores_Fundamentalistas (
-    ativo_id INT PRIMARY KEY,
-    pl DECIMAL(10,2),
-    roe DECIMAL(10,2),
-    divida_ebitda DECIMAL(10,2),
-    CONSTRAINT fk_indicador_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Cotacoes_Diarias (
-    ativo_id INT NOT NULL,
-    data DATE NOT NULL,
-    preco_abertura DECIMAL(18,2),
-    preco_fechamento DECIMAL(18,2),
-    volume DECIMAL(18,2),
-    PRIMARY KEY (ativo_id, data),
-    CONSTRAINT fk_cotacao_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Proventos (
-    ativo_id INT NOT NULL,
-    data DATE NOT NULL,
-    tipo VARCHAR(50),
-    valor DECIMAL(18,2),
-    PRIMARY KEY (ativo_id, data),
-    CONSTRAINT fk_provento_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Carteira_Historico (
-    carteira_id INT NOT NULL,
-    data DATE NOT NULL,
-    valor_total DECIMAL(18,2),
-    PRIMARY KEY (carteira_id, data),
-    CONSTRAINT fk_hist_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id)
-);
-
-CREATE TABLE Benchmarks (
-    benchmark_id INT IDENTITY(1,1) PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    valor_atual DECIMAL(18,2)
-);
-
-CREATE TABLE Comparativo_Benchmark (
-    carteira_id INT NOT NULL,
-    benchmark_id INT NOT NULL,
-    data DATE NOT NULL,
-    retorno_carteira DECIMAL(10,2),
-    retorno_benchmark DECIMAL(10,2),
-    PRIMARY KEY (carteira_id, benchmark_id, data),
-    CONSTRAINT fk_comp_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id),
-    CONSTRAINT fk_comp_bench FOREIGN KEY (benchmark_id)
-        REFERENCES Benchmarks(benchmark_id)
-);
-
-CREATE TABLE Transacoes (
-    transacao_id INT IDENTITY(1,1) PRIMARY KEY,
-    carteira_id INT NOT NULL,
-    ativo_id INT NOT NULL,
-    data DATE NOT NULL,
-    tipo VARCHAR(20),
-    quantidade DECIMAL(18,2),
-    preco DECIMAL(18,2),
-    CONSTRAINT fk_transacao_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id),
-    CONSTRAINT fk_transacao_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Riscos (
-    ativo_id INT PRIMARY KEY,
-    beta DECIMAL(10,2),
-    volatilidade DECIMAL(10,2),
-    var DECIMAL(18,2),
-    CONSTRAINT fk_risco_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Simulacoes (
-    simulacao_id INT IDENTITY(1,1) PRIMARY KEY,
-    carteira_id INT NOT NULL,
-    descricao VARCHAR(255),
-    data_execucao DATE NOT NULL,
-    CONSTRAINT fk_simulacao_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id)
-);
-
-CREATE TABLE Simulacao_Resultados (
-    simulacao_id INT NOT NULL,
-    ativo_id INT NOT NULL,
-    novo_valor DECIMAL(18,2),
-    impacto_total DECIMAL(18,2),
-    PRIMARY KEY (simulacao_id, ativo_id),
-    CONSTRAINT fk_result_simulacao FOREIGN KEY (simulacao_id)
-        REFERENCES Simulacoes(simulacao_id),
-    CONSTRAINT fk_result_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Dividend_Yield_Historico (
-    ativo_id INT NOT NULL,
-    ano INT NOT NULL,
-    dy_percentual DECIMAL(10,2),
-    PRIMARY KEY (ativo_id, ano),
-    CONSTRAINT fk_dy_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Alocacao_Setorial (
-    carteira_id INT NOT NULL,
-    setor_id INT NOT NULL,
-    peso_setor DECIMAL(5,2),
-    PRIMARY KEY (carteira_id, setor_id),
-    CONSTRAINT fk_aloc_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id),
-    CONSTRAINT fk_aloc_setor FOREIGN KEY (setor_id)
-        REFERENCES Setores(setor_id)
-);
-
-CREATE TABLE Alertas (
-    alerta_id INT IDENTITY(1,1) PRIMARY KEY,
-    carteira_id INT NOT NULL,
-    ativo_id INT NOT NULL,
-    condicao VARCHAR(255),
-    data_criacao DATE NOT NULL,
-    CONSTRAINT fk_alerta_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id),
-    CONSTRAINT fk_alerta_ativo FOREIGN KEY (ativo_id)
-        REFERENCES Ativos(ativo_id)
-);
-
-CREATE TABLE Metas_Investimento (
-    meta_id INT IDENTITY(1,1) PRIMARY KEY,
-    carteira_id INT NOT NULL,
-    descricao VARCHAR(255) NOT NULL,
-    valor_alvo DECIMAL(18,2),
-    prazo DATE,
-    CONSTRAINT fk_meta_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id)
-);
-
-CREATE TABLE Indicadores_Macroeconomicos (
-    indicador_id INT IDENTITY(1,1) PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    valor_atual DECIMAL(18,4),
-    data_atualizacao DATE NOT NULL
-);
-
-CREATE TABLE Custos_Operacionais (
-    custo_id INT IDENTITY(1,1) PRIMARY KEY,
-    carteira_id INT NOT NULL,
-    descricao VARCHAR(255),
-    valor DECIMAL(18,2),
-    data DATE,
-    CONSTRAINT fk_custo_carteira FOREIGN KEY (carteira_id)
-        REFERENCES Carteira(carteira_id)
-);
-
-GO
 CREATE OR ALTER PROCEDURE usp_ImportarDataset
     @DatasetType NVARCHAR(50),
     @FilePath NVARCHAR(4000),
@@ -766,6 +539,498 @@ BEGIN
                 WHERE AnoNumero IS NOT NULL
                   AND ValorFinal IS NOT NULL
             ) src
+            ON tgt.nome = src.nome
+            WHEN MATCHED THEN
+                UPDATE SET tgt.valor_atual = src.valor_atual,
+                           tgt.data_atualizacao = src.data_atualizacao
+            WHEN NOT MATCHED THEN
+                INSERT (nome, valor_atual, data_atualizacao)
+                VALUES (src.nome, src.valor_atual, src.data_atualizacao);
+
+            RETURN;
+        END;
+
+        IF @DatasetType = 'BENCHMARK_HISTORICO'
+        BEGIN
+            IF @TargetTicker IS NULL
+            BEGIN
+                RAISERROR('TargetTicker is required for BENCHMARK_HISTORICO.', 16, 1);
+                RETURN;
+            END;
+
+            IF OBJECT_ID('tempdb..#BenchmarkStage') IS NOT NULL DROP TABLE #BenchmarkStage;
+
+            CREATE TABLE #BenchmarkStage (
+                DataRaw NVARCHAR(20) NULL,
+                Ultimo NVARCHAR(30) NULL,
+                Abertura NVARCHAR(30) NULL,
+                Maxima NVARCHAR(30) NULL,
+                Minima NVARCHAR(30) NULL,
+                Volume NVARCHAR(30) NULL,
+                Variacao NVARCHAR(30) NULL
+            );
+
+            SET @sql = N'BULK INSERT #BenchmarkStage
+                         FROM ''' + @path + N'''
+                         WITH (
+                             FORMAT = ''CSV'',
+                             FIRSTROW = 2,
+                             TABLOCK
+                         );';
+            EXEC (@sql);
+
+            IF NOT EXISTS (SELECT 1 FROM Ativos WHERE nome = @TargetTicker)
+                INSERT INTO Ativos (nome, setor, preco_atual) VALUES (@TargetTicker, 'Benchmark', NULL);
+
+            DECLARE @BenchmarkAtivoId INT = (SELECT ativo_id FROM Ativos WHERE nome = @TargetTicker);
+
+            IF OBJECT_ID('tempdb..#BenchmarkClean') IS NOT NULL DROP TABLE #BenchmarkClean;
+
+            CREATE TABLE #BenchmarkClean (
+                DataRef DATE PRIMARY KEY,
+                PrecoAbertura DECIMAL(18,4),
+                PrecoFechamento DECIMAL(18,4),
+                PrecoMaximo DECIMAL(18,4),
+                PrecoMinimo DECIMAL(18,4),
+                VolumeNumerico DECIMAL(18,6)
+            );
+
+            INSERT INTO #BenchmarkClean (DataRef, PrecoAbertura, PrecoFechamento, PrecoMaximo, PrecoMinimo, VolumeNumerico)
+            SELECT
+                TRY_CONVERT(DATE, REPLACE(DataRaw, CHAR(13), ''), 104) AS DataRef,
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Abertura, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ) AS PrecoAbertura,
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Ultimo, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ) AS PrecoFechamento,
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Maxima, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ) AS PrecoMaximo,
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Minima, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ) AS PrecoMinimo,
+                CASE
+                    WHEN Volume IS NULL OR LTRIM(RTRIM(REPLACE(Volume, CHAR(13), ''))) = '' THEN NULL
+                    WHEN RIGHT(LTRIM(RTRIM(REPLACE(Volume, CHAR(13), ''))), 1) IN ('K', 'M', 'B') THEN
+                        TRY_CONVERT(DECIMAL(18,6),
+                            NULLIF(REPLACE(REPLACE(REPLACE(LEFT(LTRIM(RTRIM(REPLACE(Volume, CHAR(13), ''))), LEN(LTRIM(RTRIM(REPLACE(Volume, CHAR(13), '')))) - 1), '.', ''), ',', '.'), ' ', ''), '')
+                        ) * CASE RIGHT(LTRIM(RTRIM(REPLACE(Volume, CHAR(13), ''))), 1)
+                                WHEN 'K' THEN 1000
+                                WHEN 'M' THEN 1000000
+                                WHEN 'B' THEN 1000000000
+                            END
+                    ELSE
+                        TRY_CONVERT(DECIMAL(18,6),
+                            NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Volume, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                        )
+                END AS VolumeNumerico
+            FROM #BenchmarkStage
+            WHERE TRY_CONVERT(DATE, REPLACE(DataRaw, CHAR(13), ''), 104) IS NOT NULL;
+
+            MERGE Cotacoes_Diarias AS tgt
+            USING #BenchmarkClean AS src
+            ON tgt.ativo_id = @BenchmarkAtivoId AND tgt.data = src.DataRef
+            WHEN MATCHED THEN
+                UPDATE SET
+                    tgt.preco_abertura = src.PrecoAbertura,
+                    tgt.preco_fechamento = src.PrecoFechamento,
+                    tgt.volume = src.VolumeNumerico
+            WHEN NOT MATCHED THEN
+                INSERT (ativo_id, data, preco_abertura, preco_fechamento, volume)
+                VALUES (@BenchmarkAtivoId, src.DataRef, src.PrecoAbertura, src.PrecoFechamento, src.VolumeNumerico);
+
+            MERGE Desempenho_Historico AS tgt
+            USING #BenchmarkClean AS src
+            ON tgt.ativo_id = @BenchmarkAtivoId AND tgt.data = src.DataRef
+            WHEN MATCHED THEN
+                UPDATE SET tgt.preco = src.PrecoFechamento
+            WHEN NOT MATCHED THEN
+                INSERT (ativo_id, data, preco)
+                VALUES (@BenchmarkAtivoId, src.DataRef, src.PrecoFechamento);
+
+            DECLARE @BenchmarkUltimo DECIMAL(18,4) = (
+                SELECT TOP (1) PrecoFechamento FROM #BenchmarkClean ORDER BY DataRef DESC
+            );
+
+            IF @BenchmarkUltimo IS NOT NULL
+            BEGIN
+                UPDATE Ativos SET preco_atual = @BenchmarkUltimo WHERE ativo_id = @BenchmarkAtivoId;
+
+                IF EXISTS (SELECT 1 FROM Benchmarks WHERE nome = @TargetTicker)
+                    UPDATE Benchmarks SET valor_atual = @BenchmarkUltimo WHERE nome = @TargetTicker;
+                ELSE
+                    INSERT INTO Benchmarks (nome, valor_atual) VALUES (@TargetTicker, @BenchmarkUltimo);
+            END;
+
+            RETURN;
+        END;
+
+        IF @DatasetType = 'COTAHIST_MULTI'
+        BEGIN
+            IF OBJECT_ID('tempdb..#CotahistStage') IS NOT NULL DROP TABLE #CotahistStage;
+
+            CREATE TABLE #CotahistStage (
+                DataRaw NVARCHAR(20) NULL,
+                Codigo NVARCHAR(40) NULL,
+                NomeAtivo NVARCHAR(200) NULL,
+                PrecoAbertura NVARCHAR(30) NULL,
+                PrecoMaximo NVARCHAR(30) NULL,
+                PrecoMinimo NVARCHAR(30) NULL,
+                PrecoMedio NVARCHAR(30) NULL,
+                PrecoFechamento NVARCHAR(30) NULL,
+                Volume NVARCHAR(40) NULL
+            );
+
+            SET @sql = N'BULK INSERT #CotahistStage
+                         FROM ''' + @path + N'''
+                         WITH (
+                             FORMAT = ''CSV'',
+                             FIRSTROW = 2,
+                             TABLOCK
+                         );';
+            EXEC (@sql);
+
+            IF OBJECT_ID('tempdb..#CotahistClean') IS NOT NULL DROP TABLE #CotahistClean;
+
+            CREATE TABLE #CotahistClean (
+                Codigo NVARCHAR(40) NOT NULL,
+                DataRef DATE NOT NULL,
+                PrecoAbertura DECIMAL(18,4) NULL,
+                PrecoFechamento DECIMAL(18,4) NULL,
+                PrecoMaximo DECIMAL(18,4) NULL,
+                PrecoMinimo DECIMAL(18,4) NULL,
+                VolumeNumerico DECIMAL(18,4) NULL,
+                PRIMARY KEY (Codigo, DataRef)
+            );
+
+            INSERT INTO #CotahistClean (Codigo, DataRef, PrecoAbertura, PrecoFechamento, PrecoMaximo, PrecoMinimo, VolumeNumerico)
+            SELECT
+                LTRIM(RTRIM(REPLACE(Codigo, CHAR(13), ''))),
+                TRY_CONVERT(DATE, REPLACE(DataRaw, CHAR(13), ''), 112),
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(PrecoAbertura, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ),
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(PrecoFechamento, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ),
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(PrecoMaximo, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ),
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(PrecoMinimo, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                ),
+                TRY_CONVERT(DECIMAL(18,4),
+                    NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Volume, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                )
+            FROM #CotahistStage
+            WHERE TRY_CONVERT(DATE, REPLACE(DataRaw, CHAR(13), ''), 112) IS NOT NULL
+              AND LTRIM(RTRIM(REPLACE(Codigo, CHAR(13), ''))) <> '';
+
+            INSERT INTO Ativos (nome, setor, preco_atual)
+            SELECT DISTINCT Codigo, NULL, NULL
+            FROM #CotahistClean src
+            WHERE NOT EXISTS (SELECT 1 FROM Ativos a WHERE a.nome = src.Codigo);
+
+            MERGE Cotacoes_Diarias AS tgt
+            USING (
+                SELECT a.ativo_id, c.DataRef, c.PrecoAbertura, c.PrecoFechamento, c.VolumeNumerico
+                FROM #CotahistClean c
+                INNER JOIN Ativos a ON a.nome = c.Codigo
+            ) AS src
+            ON tgt.ativo_id = src.ativo_id AND tgt.data = src.DataRef
+            WHEN MATCHED THEN
+                UPDATE SET
+                    tgt.preco_abertura = COALESCE(src.PrecoAbertura, tgt.preco_abertura),
+                    tgt.preco_fechamento = COALESCE(src.PrecoFechamento, tgt.preco_fechamento),
+                    tgt.volume = COALESCE(src.VolumeNumerico, tgt.volume)
+            WHEN NOT MATCHED THEN
+                INSERT (ativo_id, data, preco_abertura, preco_fechamento, volume)
+                VALUES (src.ativo_id, src.DataRef, src.PrecoAbertura, src.PrecoFechamento, src.VolumeNumerico);
+
+            MERGE Desempenho_Historico AS tgt
+            USING (
+                SELECT a.ativo_id, c.DataRef, c.PrecoFechamento
+                FROM #CotahistClean c
+                INNER JOIN Ativos a ON a.nome = c.Codigo
+                WHERE c.PrecoFechamento IS NOT NULL
+            ) AS src
+            ON tgt.ativo_id = src.ativo_id AND tgt.data = src.DataRef
+            WHEN MATCHED THEN
+                UPDATE SET tgt.preco = src.PrecoFechamento
+            WHEN NOT MATCHED THEN
+                INSERT (ativo_id, data, preco)
+                VALUES (src.ativo_id, src.DataRef, src.PrecoFechamento);
+
+            UPDATE a
+            SET a.preco_atual = s.PrecoFechamento
+            FROM Ativos a
+            INNER JOIN (
+                SELECT c.Codigo, c.PrecoFechamento
+                FROM #CotahistClean c
+                INNER JOIN (
+                    SELECT Codigo, MAX(DataRef) AS UltimaData
+                    FROM #CotahistClean
+                    GROUP BY Codigo
+                ) ult ON ult.Codigo = c.Codigo AND ult.UltimaData = c.DataRef
+            ) s ON s.Codigo = a.nome
+            WHERE s.PrecoFechamento IS NOT NULL;
+
+            RETURN;
+        END;
+
+        IF @DatasetType = 'IPCA_MENSAL'
+        BEGIN
+            IF OBJECT_ID('tempdb..#IpcaStage') IS NOT NULL DROP TABLE #IpcaStage;
+
+            CREATE TABLE #IpcaStage (
+                Periodo NVARCHAR(50) NULL,
+                Valor NVARCHAR(30) NULL
+            );
+
+            SET @sql = N'BULK INSERT #IpcaStage
+                         FROM ''' + @path + N'''
+                         WITH (
+                             FORMAT = ''CSV'',
+                             FIRSTROW = 2,
+                             TABLOCK
+                         );';
+            EXEC (@sql);
+
+            MERGE Indicadores_Macroeconomicos AS tgt
+            USING (
+                SELECT
+                    CONCAT('IPCA ', CONVERT(CHAR(7), DATEFROMPARTS(AnoNumero, MesNumero, 1), 126)) AS nome,
+                    ValorNumerico AS valor_atual,
+                    DATEFROMPARTS(AnoNumero, MesNumero, 1) AS data_atualizacao
+                FROM (
+                    SELECT
+                        CASE UPPER(LEFT(PeriodoTrim, CHARINDEX(' ', PeriodoTrim + ' ') - 1))
+                            WHEN 'JAN' THEN 1
+                            WHEN 'FEV' THEN 2
+                            WHEN 'MAR' THEN 3
+                            WHEN 'ABR' THEN 4
+                            WHEN 'MAI' THEN 5
+                            WHEN 'JUN' THEN 6
+                            WHEN 'JUL' THEN 7
+                            WHEN 'AGO' THEN 8
+                            WHEN 'SET' THEN 9
+                            WHEN 'OUT' THEN 10
+                            WHEN 'NOV' THEN 11
+                            WHEN 'DEZ' THEN 12
+                            ELSE NULL
+                        END AS MesNumero,
+                        TRY_CONVERT(INT, RIGHT(PeriodoTrim, 4)) AS AnoNumero,
+                        TRY_CONVERT(DECIMAL(18,4),
+                            NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Valor, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                        ) AS ValorNumerico
+                    FROM (
+                        SELECT
+                            LTRIM(RTRIM(REPLACE(Periodo, CHAR(13), ''))) AS PeriodoTrim,
+                            Valor
+                        FROM #IpcaStage
+                    ) raw
+                ) dados
+                WHERE MesNumero BETWEEN 1 AND 12
+                  AND AnoNumero IS NOT NULL
+                  AND ValorNumerico IS NOT NULL
+            ) AS src
+            ON tgt.nome = src.nome
+            WHEN MATCHED THEN
+                UPDATE SET tgt.valor_atual = src.valor_atual,
+                           tgt.data_atualizacao = src.data_atualizacao
+            WHEN NOT MATCHED THEN
+                INSERT (nome, valor_atual, data_atualizacao)
+                VALUES (src.nome, src.valor_atual, src.data_atualizacao);
+
+            RETURN;
+        END;
+
+        IF @DatasetType = 'PIB_PER_CAPITA'
+        BEGIN
+            IF OBJECT_ID('tempdb..#PibPerCapitaStage') IS NOT NULL DROP TABLE #PibPerCapitaStage;
+
+            CREATE TABLE #PibPerCapitaStage (
+                Periodo NVARCHAR(10) NULL,
+                Valor NVARCHAR(30) NULL
+            );
+
+            SET @sql = N'BULK INSERT #PibPerCapitaStage
+                         FROM ''' + @path + N'''
+                         WITH (
+                             FORMAT = ''CSV'',
+                             FIRSTROW = 2,
+                             TABLOCK
+                         );';
+            EXEC (@sql);
+
+            MERGE Indicadores_Macroeconomicos AS tgt
+            USING (
+                SELECT
+                    CONCAT('PIB Per Capita ', AnoNumero) AS nome,
+                    ValorNumerico AS valor_atual,
+                    DATEFROMPARTS(AnoNumero, 12, 31) AS data_atualizacao
+                FROM (
+                    SELECT
+                        TRY_CONVERT(INT, LTRIM(RTRIM(REPLACE(Periodo, CHAR(13), '')))) AS AnoNumero,
+                        TRY_CONVERT(DECIMAL(18,4),
+                            NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Valor, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                        ) AS ValorNumerico
+                    FROM #PibPerCapitaStage
+                ) dados
+                WHERE AnoNumero IS NOT NULL
+                  AND ValorNumerico IS NOT NULL
+            ) AS src
+            ON tgt.nome = src.nome
+            WHEN MATCHED THEN
+                UPDATE SET tgt.valor_atual = src.valor_atual,
+                           tgt.data_atualizacao = src.data_atualizacao
+            WHEN NOT MATCHED THEN
+                INSERT (nome, valor_atual, data_atualizacao)
+                VALUES (src.nome, src.valor_atual, src.data_atualizacao);
+
+            RETURN;
+        END;
+
+        IF @DatasetType = 'PIB_VARIACAO_TRIMESTRAL'
+        BEGIN
+            IF OBJECT_ID('tempdb..#PibTrimestralStage') IS NOT NULL DROP TABLE #PibTrimestralStage;
+
+            CREATE TABLE #PibTrimestralStage (
+                Periodo NVARCHAR(30) NULL,
+                Valor NVARCHAR(30) NULL
+            );
+
+            SET @sql = N'BULK INSERT #PibTrimestralStage
+                         FROM ''' + @path + N'''
+                         WITH (
+                             FORMAT = ''CSV'',
+                             FIRSTROW = 2,
+                             TABLOCK
+                         );';
+            EXEC (@sql);
+
+            MERGE Indicadores_Macroeconomicos AS tgt
+            USING (
+                SELECT
+                    CONCAT('PIB Variacao ', AnoNumero, 'Q', TrimestreNumero) AS nome,
+                    ValorNumerico AS valor_atual,
+                    DATEFROMPARTS(AnoNumero, ((TrimestreNumero - 1) * 3) + 1, 1) AS data_atualizacao
+                FROM (
+                    SELECT
+                        TRY_CONVERT(INT, LEFT(PeriodoLimpo, CHARINDEX(' ', PeriodoLimpo + ' ') - 1)) AS TrimestreNumero,
+                        TRY_CONVERT(INT, RIGHT(PeriodoLimpo, 4)) AS AnoNumero,
+                        TRY_CONVERT(DECIMAL(18,4),
+                            NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Valor, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                        ) AS ValorNumerico
+                    FROM (
+                        SELECT
+                            LTRIM(RTRIM(REPLACE(REPLACE(Periodo, CHAR(13), ''), NCHAR(186), ''))) AS PeriodoLimpo,
+                            Valor
+                        FROM #PibTrimestralStage
+                    ) base
+                ) dados
+                WHERE TrimestreNumero BETWEEN 1 AND 4
+                  AND AnoNumero IS NOT NULL
+                  AND ValorNumerico IS NOT NULL
+            ) AS src
+            ON tgt.nome = src.nome
+            WHEN MATCHED THEN
+                UPDATE SET tgt.valor_atual = src.valor_atual,
+                           tgt.data_atualizacao = src.data_atualizacao
+            WHEN NOT MATCHED THEN
+                INSERT (nome, valor_atual, data_atualizacao)
+                VALUES (src.nome, src.valor_atual, src.data_atualizacao);
+
+            RETURN;
+        END;
+
+        IF @DatasetType = 'SELIC_META'
+        BEGIN
+            IF OBJECT_ID('tempdb..#SelicStage') IS NOT NULL DROP TABLE #SelicStage;
+
+            CREATE TABLE #SelicStage (
+                DataRaw NVARCHAR(30) NULL,
+                Valor NVARCHAR(30) NULL
+            );
+
+            SET @sql = N'BULK INSERT #SelicStage
+                         FROM ''' + @path + N'''
+                         WITH (
+                             FIELDTERMINATOR = '';'',
+                             ROWTERMINATOR = ''0x0a'',
+                             FIRSTROW = 2,
+                             TABLOCK
+                         );';
+            EXEC (@sql);
+
+            MERGE Indicadores_Macroeconomicos AS tgt
+            USING (
+                SELECT
+                    CONCAT('Selic Meta ', CONVERT(CHAR(10), DataRef, 126)) AS nome,
+                    ValorNumerico AS valor_atual,
+                    DataRef AS data_atualizacao
+                FROM (
+                    SELECT
+                        TRY_CONVERT(DATE, REPLACE(DataRaw, '"', ''), 120) AS DataRef,
+                        TRY_CONVERT(DECIMAL(18,4),
+                            NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(Valor, '"', ''), CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                        ) AS ValorNumerico
+                    FROM #SelicStage
+                ) dados
+                WHERE DataRef IS NOT NULL
+                  AND ValorNumerico IS NOT NULL
+            ) AS src
+            ON tgt.nome = src.nome
+            WHEN MATCHED THEN
+                UPDATE SET tgt.valor_atual = src.valor_atual,
+                           tgt.data_atualizacao = src.data_atualizacao
+            WHEN NOT MATCHED THEN
+                INSERT (nome, valor_atual, data_atualizacao)
+                VALUES (src.nome, src.valor_atual, src.data_atualizacao);
+
+            RETURN;
+        END;
+
+        IF @DatasetType = 'VOLATILIDADE_MENSAL'
+        BEGIN
+            IF OBJECT_ID('tempdb..#VolatilidadeStage') IS NOT NULL DROP TABLE #VolatilidadeStage;
+
+            CREATE TABLE #VolatilidadeStage (
+                Mes NVARCHAR(10) NULL,
+                Ano NVARCHAR(10) NULL,
+                Valor NVARCHAR(30) NULL
+            );
+
+            SET @sql = N'BULK INSERT #VolatilidadeStage
+                         FROM ''' + @path + N'''
+                         WITH (
+                             FIELDTERMINATOR = '';'',
+                             ROWTERMINATOR = ''0x0a'',
+                             FIRSTROW = 4,
+                             TABLOCK
+                         );';
+            EXEC (@sql);
+
+            MERGE Indicadores_Macroeconomicos AS tgt
+            USING (
+                SELECT
+                    CONCAT('Volatilidade ISEE ', CONVERT(CHAR(7), DATEFROMPARTS(AnoNumero, MesNumero, 1), 126)) AS nome,
+                    ValorNumerico AS valor_atual,
+                    DATEFROMPARTS(AnoNumero, MesNumero, 1) AS data_atualizacao
+                FROM (
+                    SELECT
+                        TRY_CONVERT(INT, Mes) AS MesNumero,
+                        TRY_CONVERT(INT, Ano) AS AnoNumero,
+                        TRY_CONVERT(DECIMAL(18,4),
+                            NULLIF(REPLACE(REPLACE(REPLACE(REPLACE(Valor, CHAR(13), ''), '.', ''), ',', '.'), ' ', ''), '')
+                        ) AS ValorNumerico
+                    FROM #VolatilidadeStage
+                ) dados
+                WHERE MesNumero BETWEEN 1 AND 12
+                  AND AnoNumero IS NOT NULL
+                  AND ValorNumerico IS NOT NULL
+            ) AS src
             ON tgt.nome = src.nome
             WHEN MATCHED THEN
                 UPDATE SET tgt.valor_atual = src.valor_atual,
