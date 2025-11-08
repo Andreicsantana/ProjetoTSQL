@@ -8,3 +8,6 @@ alerta_id,carteira_id,ativo_id,condicao,data_criacao
 7,7,7,RBRY11 variacao > 5%,2025-01-02
 8,8,8,VGIR11 variacao > 5%,2025-01-02
 9,9,9,XPML11 variacao > 5%,2025-01-02
+10,10,10,RF001 variacao > 5%,2025-01-02
+11,11,11,RF002 variacao > 5%,2025-01-02
+12,12,12,RF003 variacao > 5%,2025-01-02

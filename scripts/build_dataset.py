@@ -21,6 +21,7 @@ OUTPUT_DIR = BASE_DIR / "generated_dataset"
 WINDOW_DAYS = 30
 BASE_CAPITAL = 100_000.0
 BENCHMARK_NAME = "IBOV"
+RNG_SEED = 42
 
 # Patch tickers that appear truncated or with alternate codes in the source CSVs.
 TICKER_FIXES = {
@@ -69,6 +70,42 @@ def load_carteira_modelo() -> pd.DataFrame:
         if col in df.columns:
             df[col] = df[col].apply(safe_float)
     return df
+
+
+def load_renda_fixa() -> pd.DataFrame:
+    path = CSV_DIR / "renda_fixa_taxas_clean.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    df = pd.read_csv(path, sep=";")
+    df = df.dropna(subset=["nome"])
+    df["codigo_ativo"] = [f"RF{idx:03d}" for idx in range(1, len(df) + 1)]
+    df["Ticker"] = df["codigo_ativo"]
+    df["Nome_do_Fundo"] = df["nome"].str.strip()
+    df["Setor"] = df["setor"].fillna("Renda Fixa").str.strip()
+    df["preco_atual"] = df["preco_atual"].apply(safe_float)
+    df["nome"] = df["Nome_do_Fundo"]
+    df["dividend_yield"] = 0.0
+    df["proventos_mensal"] = 0.0
+    df["dividend_yield_historico"] = 0.0
+    df["pl"] = math.nan
+    df["roe"] = math.nan
+    df["divida_ebitda"] = math.nan
+    df["CNPJ"] = ""
+    return df[[
+        "codigo_ativo",
+        "Ticker",
+        "nome",
+    "Nome_do_Fundo",
+        "Setor",
+        "preco_atual",
+        "pl",
+        "roe",
+        "divida_ebitda",
+        "dividend_yield",
+        "proventos_mensal",
+        "dividend_yield_historico",
+        "CNPJ",
+    ]]
 
 
 def load_empresas() -> pd.DataFrame:
@@ -151,6 +188,39 @@ def filter_price_window(prices_df: pd.DataFrame, tickers: Iterable[str], start_d
     return window_df
 
 
+def generate_renda_fixa_prices(
+    renda_df: pd.DataFrame,
+    start_date: pd.Timestamp,
+    end_date: pd.Timestamp,
+) -> pd.DataFrame:
+    if renda_df.empty:
+        return pd.DataFrame(columns=["date", "ticker", "open", "high", "low", "avg", "close", "volume"])
+    dates = pd.date_range(start=start_date, end=end_date, freq="D")
+    rng = np.random.default_rng(RNG_SEED)
+    records: List[Dict[str, object]] = []
+    for row in renda_df.itertuples(index=False):
+        base_price = row.preco_atual if not math.isnan(row.preco_atual) else 1_000.0
+        shocks = rng.normal(loc=0.0001, scale=0.0005, size=len(dates))
+        prices = base_price * np.cumprod(1 + shocks)
+        volumes = rng.normal(loc=5_000, scale=1_000, size=len(dates))
+        volumes = np.clip(volumes, 1_000, None)
+        for dt, price, vol in zip(dates, prices, volumes):
+            price = float(price)
+            records.append(
+                {
+                    "date": dt,
+                    "ticker": row.codigo_ativo,
+                    "open": price,
+                    "high": price * 1.0005,
+                    "low": price * 0.9995,
+                    "avg": price,
+                    "close": price,
+                    "volume": float(vol),
+                }
+            )
+    return pd.DataFrame(records)
+
+
 def build_setores(empresas_subset: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, int]]:
     setores = (
         empresas_subset["Setor"].fillna("Setor Indefinido").str.strip().drop_duplicates().sort_values()
@@ -169,14 +239,28 @@ def build_empresas(
     records: List[Dict[str, object]] = []
     for idx, row in enumerate(empresas_subset.itertuples(index=False), start=1):
         setor = row.Setor.strip() if isinstance(row.Setor, str) else "Setor Indefinido"
-        nome = getattr(row, "Nome_do_Fundo", None) or getattr(row, "nome", None) or row.Ticker
-        cnpj = getattr(row, "CNPJ", "")
-        cnpj_txt = str(cnpj).replace("/", "").replace(".", "").replace("-", "")
+        nome_candidates = [
+            getattr(row, "Nome_do_Fundo", None),
+            getattr(row, "nome", None),
+            getattr(row, "Ticker", None),
+            getattr(row, "codigo_ativo", None),
+        ]
+        nome_escolhido = ""
+        for candidato in nome_candidates:
+            if isinstance(candidato, str):
+                candidato = candidato.strip()
+                if candidato:
+                    nome_escolhido = candidato
+                    break
+        if not nome_escolhido:
+            nome_escolhido = f"Empresa {idx}"
+        cnpj_raw = getattr(row, "CNPJ", "")
+        cnpj_txt = "".join(ch for ch in str(cnpj_raw) if ch.isdigit())
         cnpj_txt = cnpj_txt.zfill(14) if cnpj_txt else ""
         records.append(
             {
                 "empresa_id": idx,
-                "nome": nome,
+                "nome": nome_escolhido,
                 "cnpj": cnpj_txt,
                 "setor_id": setor_map.get(setor, setor_map[next(iter(setor_map))]),
             }
@@ -206,7 +290,11 @@ def build_ativos(
         )
         if preco_atual == 0:
             preco_atual = float(last_prices.get(ticker, 0))
-        base_nome = getattr(row, "Nome_do_Fundo", None) or getattr(row, "nome", None) or ticker
+        base_nome = getattr(row, "Nome_do_Fundo", None)
+        if base_nome is None or (isinstance(base_nome, float) and math.isnan(base_nome)):
+            base_nome = getattr(row, "nome", None)
+        if base_nome is None or (isinstance(base_nome, float) and math.isnan(base_nome)):
+            base_nome = ticker
         nome = f"{ticker} - {base_nome}"
         records.append(
             {
@@ -241,7 +329,18 @@ def build_carteira(
     end_date: pd.Timestamp,
 ) -> Tuple[pd.DataFrame, Dict[int, float]]:
     quantities: Dict[int, float] = {}
-    weights = np.repeat(1 / len(ativos_df), len(ativos_df)) if not ativos_df.empty else []
+    if ativos_df.empty:
+        return pd.DataFrame(), quantities
+    rng = np.random.default_rng(RNG_SEED)
+    min_weight = 1_000 / BASE_CAPITAL
+    weights = rng.dirichlet(np.ones(len(ativos_df)))
+    attempts = 0
+    while (weights < min_weight).any() and attempts < 1_000:
+        weights = rng.dirichlet(np.ones(len(ativos_df)))
+        attempts += 1
+    if (weights < min_weight).any():
+        weights = np.maximum(weights, min_weight)
+        weights = weights / weights.sum()
     records: List[Dict[str, object]] = []
     for idx, (ativo_row, peso) in enumerate(zip(ativos_df.itertuples(index=False), weights), start=1):
         close_series = price_window[(price_window["ticker"] == ativo_row.ticker) & (price_window["date"] == end_date)]["close"]
@@ -298,21 +397,44 @@ def build_cotacoes(price_window: pd.DataFrame, ticker_to_ativo: Dict[str, int]) 
 def build_carteira_historico(
     carteiras_df: pd.DataFrame,
     price_window: pd.DataFrame,
-    quantities: Dict[int, float],
+    transacoes_df: pd.DataFrame,
     ticker_to_ativo: Dict[str, int],
 ) -> pd.DataFrame:
     records: List[Dict[str, object]] = []
     carteiras_by_ativo = {row.ativo_id: row.carteira_id for row in carteiras_df.itertuples(index=False)}
+    tx = transacoes_df.copy()
+    if not tx.empty:
+        tx["data"] = pd.to_datetime(tx["data"])
+        tx["qty_delta"] = np.where(
+            tx["tipo"].str.upper().str.contains("VENDA"),
+            -tx["quantidade"],
+            tx["quantidade"],
+        )
     for ticker, group in price_window.groupby("ticker"):
-        ativo_id = ticker_to_ativo[ticker]
+        ativo_id = ticker_to_ativo.get(ticker)
+        if ativo_id is None or ativo_id not in carteiras_by_ativo:
+            continue
         carteira_id = carteiras_by_ativo[ativo_id]
-        quantidade = quantities.get(ativo_id, 0.0)
-        for row in group.itertuples(index=False):
+        group_sorted = group.sort_values("date")
+        tx_asset = pd.DataFrame()
+        qty_cumsum = pd.Series(dtype="float64")
+        if not tx.empty:
+            tx_asset = tx[tx["carteira_id"] == carteira_id].sort_values("data")
+            if not tx_asset.empty:
+                qty_cumsum = tx_asset.set_index("data")["qty_delta"].cumsum()
+        for row in group_sorted.itertuples(index=False):
+            dt = row.date
+            quantidade = 0.0
+            if not qty_cumsum.empty:
+                relevant = qty_cumsum[qty_cumsum.index <= dt]
+                if not relevant.empty:
+                    quantidade = float(relevant.iloc[-1])
+            valor = round(float(row.close) * quantidade, 2)
             records.append(
                 {
                     "carteira_id": carteira_id,
-                    "data": row.date.date().isoformat(),
-                    "valor_total": round(float(row.close) * quantidade, 2),
+                    "data": dt.date().isoformat(),
+                    "valor_total": valor,
                 }
             )
     return pd.DataFrame(records)
@@ -365,36 +487,35 @@ def build_benchmarks(benchmark_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_comparativo(
-    carteiras_df: pd.DataFrame,
-    price_window: pd.DataFrame,
-    quantities: Dict[int, float],
-    ticker_to_ativo: Dict[str, int],
+    carteira_hist_df: pd.DataFrame,
     benchmark_df: pd.DataFrame,
 ) -> pd.DataFrame:
-    # Aggregate carteira by date.
-    carteira_id = 1
+    if carteira_hist_df.empty:
+        return pd.DataFrame()
+    carteira_hist_df = carteira_hist_df.copy()
+    carteira_hist_df["data"] = pd.to_datetime(carteira_hist_df["data"])
     carteira_daily = (
-        price_window.assign(ativo_id=price_window["ticker"].map(ticker_to_ativo))
-        .assign(quantity=lambda df: df["ativo_id"].map(quantities))
-        .assign(value=lambda df: df["close"] * df["quantity"])
-        .groupby("date")["value"]
-        .sum()
-        .sort_index()
+        carteira_hist_df.groupby("data")["valor_total"].sum().sort_index()
     )
-    carteira_returns = carteira_daily.pct_change().fillna(0.0).reset_index()
-    benchmark_returns = (
-        benchmark_df.sort_values("Data")["close"].pct_change().fillna(0.0).reset_index(drop=True)
-    )
-    benchmark_aligned = benchmark_returns.reindex(range(len(carteira_returns))).fillna(0.0)
+    carteira_returns = carteira_daily.pct_change().fillna(0.0)
+    benchmark_df = benchmark_df.sort_values("Data").set_index("Data")
+    benchmark_returns = benchmark_df["close"].pct_change().fillna(0.0)
+    benchmark_aligned = benchmark_returns.reindex(carteira_returns.index, method="ffill").fillna(0.0)
+    aligned = pd.DataFrame(
+        {
+            "retorno_carteira": carteira_returns,
+            "retorno_benchmark": benchmark_aligned,
+        }
+    ).reset_index()
     records: List[Dict[str, object]] = []
-    for idx, row in carteira_returns.iterrows():
+    for row in aligned.itertuples(index=False):
         records.append(
             {
-                "carteira_id": carteira_id,
+                "carteira_id": 1,
                 "benchmark_id": 1,
-                "data": row["date"].date().isoformat(),
-                "retorno_carteira": round(float(row["value"]), 6),
-                "retorno_benchmark": round(float(benchmark_aligned.iloc[idx]), 6),
+                "data": row.data.date().isoformat(),
+                "retorno_carteira": round(float(row.retorno_carteira), 6),
+                "retorno_benchmark": round(float(row.retorno_benchmark), 6),
             }
         )
     return pd.DataFrame(records)
@@ -474,18 +595,22 @@ def build_dividend_yield_historico(ativos_df: pd.DataFrame, end_date: pd.Timesta
 def build_transacoes(
     carteiras_df: pd.DataFrame,
     price_window: pd.DataFrame,
-    quantities: Dict[int, float],
     ticker_to_ativo: Dict[str, int],
     start_date: pd.Timestamp,
-) -> pd.DataFrame:
+) -> Tuple[pd.DataFrame, Dict[int, float], Dict[int, float]]:
+    rng = np.random.default_rng(RNG_SEED)
     records: List[Dict[str, object]] = []
+    quantity_totals: Dict[int, float] = {}
+    invested_totals: Dict[int, float] = {}
     transacao_id = 1
     for carteira in carteiras_df.itertuples(index=False):
         ticker = carteira.ticker
-        primeira_data = price_window[price_window["ticker"] == ticker]["date"].min()
-        preco_compra = price_window[
-            (price_window["ticker"] == ticker) & (price_window["date"] == primeira_data)
-        ]["close"].iloc[0]
+        grupo_precos = price_window[price_window["ticker"] == ticker].sort_values("date")
+        if grupo_precos.empty:
+            continue
+        primeira_data = grupo_precos["date"].min()
+        preco_compra = grupo_precos.loc[grupo_precos["date"] == primeira_data, "close"].iloc[0]
+        base_quantidade = float(carteira.quantidade_teorica)
         records.append(
             {
                 "transacao_id": transacao_id,
@@ -493,15 +618,41 @@ def build_transacoes(
                 "ativo_id": carteira.ativo_id,
                 "data": primeira_data.date().isoformat(),
                 "tipo": "COMPRA",
-                "quantidade": round(quantities[carteira.ativo_id], 4),
+                "quantidade": round(base_quantidade, 4),
                 "preco": round(float(preco_compra), 4),
             }
         )
         transacao_id += 1
+        invested = base_quantidade * float(preco_compra)
+        extra_amount = rng.uniform(1_000, 5_000)
+        extra_date = primeira_data + pd.Timedelta(days=rng.integers(5, WINDOW_DAYS - 2))
+        extra_date = min(extra_date, grupo_precos["date"].max())
+        extra_price = (
+            grupo_precos.loc[grupo_precos["date"] >= extra_date, "close"].iloc[0]
+            if not grupo_precos.loc[grupo_precos["date"] >= extra_date].empty
+            else grupo_precos["close"].iloc[-1]
+        )
+        extra_quantidade = round(float(extra_amount / extra_price), 4)
+        if extra_quantidade > 0:
+            records.append(
+                {
+                    "transacao_id": transacao_id,
+                    "carteira_id": carteira.carteira_id,
+                    "ativo_id": carteira.ativo_id,
+                    "data": extra_date.date().isoformat(),
+                    "tipo": "COMPRA",
+                    "quantidade": extra_quantidade,
+                    "preco": round(float(extra_price), 4),
+                }
+            )
+            transacao_id += 1
+            invested += extra_quantidade * float(extra_price)
+            base_quantidade += extra_quantidade
+
         rebalance_date = start_date + pd.Timedelta(days=WINDOW_DAYS // 2)
-        mid_price = price_window[
-            (price_window["ticker"] == ticker) & (price_window["date"] >= rebalance_date)
-        ]["close"].iloc[0]
+        if rebalance_date > grupo_precos["date"].max():
+            rebalance_date = grupo_precos["date"].max()
+        mid_price = grupo_precos.loc[grupo_precos["date"] >= rebalance_date, "close"].iloc[0]
         records.append(
             {
                 "transacao_id": transacao_id,
@@ -514,7 +665,9 @@ def build_transacoes(
             }
         )
         transacao_id += 1
-    return pd.DataFrame(records)
+        quantity_totals[carteira.ativo_id] = round(base_quantidade, 4)
+        invested_totals[carteira.carteira_id] = round(float(invested), 2)
+    return pd.DataFrame(records), quantity_totals, invested_totals
 
 
 def build_riscos(
@@ -710,13 +863,28 @@ def main() -> None:
     empresas_raw = load_empresas()
     prices_raw = load_price_history()
     assets = select_target_assets(carteira_modelo, empresas_raw, prices_raw)
-    tickers = assets["codigo_ativo"].tolist()
+    tickers_equity = assets["codigo_ativo"].tolist()
 
-    start_date, end_date = determine_window(prices_raw, tickers)
-    price_window = filter_price_window(prices_raw, tickers, start_date, end_date)
+    start_date, end_date = determine_window(prices_raw, tickers_equity)
+    price_window = filter_price_window(prices_raw, tickers_equity, start_date, end_date)
+
+    renda_fixa_assets = load_renda_fixa()
+    if not renda_fixa_assets.empty:
+        assets = pd.concat([assets, renda_fixa_assets], ignore_index=True, sort=False)
+        renda_prices = generate_renda_fixa_prices(renda_fixa_assets, start_date, end_date)
+        if not renda_prices.empty:
+            price_window = pd.concat([price_window, renda_prices], ignore_index=True)
+    price_window.sort_values(["ticker", "date"], inplace=True)
 
     setores_df, setor_map = build_setores(assets)
-    empresas_df = build_empresas(assets, setor_map)
+    empresas_base = assets.copy()
+    empresas_base["CNPJ"] = empresas_base["CNPJ"].fillna("").astype(str)
+    empresas_equity = (
+        empresas_base[empresas_base["CNPJ"].str.strip() != ""]
+        .drop_duplicates(subset=["Ticker"])
+        .reset_index(drop=True)
+    )
+    empresas_df = build_empresas(empresas_equity, setor_map)
     ativos_df, ticker_to_ativo = build_ativos(assets, setor_map, price_window)
 
     # Merge supplemental fields from carteira_modelo into ativos_df for later use.
@@ -738,21 +906,33 @@ def main() -> None:
     )
 
     carteira_definicao_df = build_carteira_definicao(end_date)
-    carteiras_df, quantities = build_carteira(ativos_df, price_window, end_date)
+    carteiras_df, base_quantities = build_carteira(ativos_df, price_window, end_date)
     carteiras_df = carteiras_df.merge(ativos_df[["ativo_id", "ticker"]], on="ativo_id", how="left")
+
+    transacoes_df, quantity_totals, invested_totals = build_transacoes(
+        carteiras_df, price_window, ticker_to_ativo, start_date
+    )
+    carteiras_df["quantidade_teorica"] = (
+        carteiras_df["ativo_id"].map(quantity_totals).fillna(0.0).round(4)
+    )
+    carteiras_df["valor_investido"] = (
+        carteiras_df["carteira_id"].map(invested_totals).fillna(0.0).round(2)
+    )
+    total_invested = carteiras_df["valor_investido"].sum()
+    if total_invested > 0:
+        carteiras_df["peso"] = (carteiras_df["valor_investido"] / total_invested).round(4)
 
     desempenho_df = build_desempenho(price_window, ticker_to_ativo)
     cotacoes_df = build_cotacoes(price_window, ticker_to_ativo)
-    carteira_hist_df = build_carteira_historico(carteiras_df, price_window, quantities, ticker_to_ativo)
+    carteira_hist_df = build_carteira_historico(carteiras_df, price_window, transacoes_df, ticker_to_ativo)
 
     benchmark_df = load_benchmark(start_date, end_date)
     benchmarks_df = build_benchmarks(benchmark_df)
-    comparativo_df = build_comparativo(carteiras_df, price_window, quantities, ticker_to_ativo, benchmark_df)
+    comparativo_df = build_comparativo(carteira_hist_df, benchmark_df)
 
-    dividendos_df, proventos_df = build_dividendos(ativos_df, carteiras_df, quantities, end_date)
+    dividendos_df, proventos_df = build_dividendos(ativos_df, carteiras_df, quantity_totals, end_date)
     indicadores_f_df = build_indicadores_fundamentalistas(ativos_df)
     dy_hist_df = build_dividend_yield_historico(ativos_df, end_date)
-    transacoes_df = build_transacoes(carteiras_df, price_window, quantities, ticker_to_ativo, start_date)
     riscos_df = build_riscos(price_window, ticker_to_ativo, benchmark_df)
     simulacoes_df = build_simulacoes(1, end_date)
     simulacao_resultados_df = build_simulacao_resultados(simulacoes_df, carteiras_df, price_window)
