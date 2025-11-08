@@ -23,13 +23,14 @@ WHERE carteira_id = @carteira_id;
 
 -- 1.2 Distribuição setorial
 SELECT
-    COALESCE(a.setor, 'Não informado') AS setor,
+    COALESCE(st.nome, 'Não informado') AS setor,
     SUM(c.valor_investido) AS valor_investido_setor,
     100.0 * SUM(c.valor_investido) / NULLIF((SELECT SUM(valor_investido) FROM Carteira WHERE carteira_id = @carteira_id),0) AS percentual_setor
 FROM Carteira c
 JOIN Ativos a ON a.ativo_id = c.ativo_id
+LEFT JOIN Setores st ON st.setor_id = a.setor_id
 WHERE c.carteira_id = @carteira_id
-GROUP BY COALESCE(a.setor,'Não informado')
+GROUP BY COALESCE(st.nome,'Não informado')
 ORDER BY valor_investido_setor DESC;
 
 -- 2.1 Valorização (últimos @dias)
@@ -129,12 +130,13 @@ WHERE c.carteira_id = @carteira_id;
 -- 4.2 Exposição ao maior setor
 ;WITH setor_exp AS (
     SELECT
-        COALESCE(a.setor,'Não informado') AS setor,
+        COALESCE(st.nome,'Não informado') AS setor,
         SUM(c.valor_investido) AS valor_setor
     FROM Carteira c
     JOIN Ativos a ON a.ativo_id = c.ativo_id
+    LEFT JOIN Setores st ON st.setor_id = a.setor_id
     WHERE c.carteira_id = @carteira_id
-    GROUP BY COALESCE(a.setor,'Não informado')
+    GROUP BY COALESCE(st.nome,'Não informado')
 )
 SELECT TOP(1) setor, valor_setor,
        100.0 * valor_setor / NULLIF((SELECT SUM(valor_investido) FROM Carteira WHERE carteira_id = @carteira_id),0) AS percentual
@@ -159,9 +161,11 @@ FROM top_ativo ta;
 -- 4.4 Reinvestir dividendos do último ano
 SELECT
     SUM(c.valor_investido) AS total_atual,
-    ISNULL(d.total_dividendos_ano,0) AS soma_dividendos_ultimo_ano,
-    SUM(c.valor_investido) + ISNULL(d.total_dividendos_ano,0) AS novo_total_reinvestindo_dividendos,
-    100.0 * ( (SUM(c.valor_investido) + ISNULL(d.total_dividendos_ano,0)) / NULLIF(SUM(c.valor_investido),0) - 1.0) AS ganho_percentual_por_reinvestir
+    SUM(ISNULL(d.total_dividendos_ano,0)) AS soma_dividendos_ultimo_ano,
+    SUM(c.valor_investido) + SUM(ISNULL(d.total_dividendos_ano,0)) AS novo_total_reinvestindo_dividendos,
+    CASE WHEN SUM(c.valor_investido) = 0 THEN NULL
+         ELSE 100.0 * ( (SUM(c.valor_investido) + SUM(ISNULL(d.total_dividendos_ano,0))) / SUM(c.valor_investido) - 1.0)
+    END AS ganho_percentual_por_reinvestir
 FROM Carteira c
 LEFT JOIN (
     SELECT ativo_id, SUM(valor) AS total_dividendos_ano

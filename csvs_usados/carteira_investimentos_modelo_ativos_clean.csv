@@ -1,0 +1,12 @@
+categoria,codigo_ativo,nome,cnpj,setor,preco_atual,pl,p_vp,roe,divida_ebitda,dividend_yield,proventos_mensal,dividend_yield_historico
+ACOES,BBAS3,Banco do Brasil S.A.,00.000.000/0001-91,Bancos,22.89,7.95,,8.71,1.50,8.00,0.42470527,7.49
+FUNDOS IMOBILIARIOS,KLBN11,Klabin S.A.,89.637.490/0001-45,Papel e Celulose,18.27,7.95,,20.50,7.44,6.02,0.25094461,3.64
+ACOES,BBDC4,Banco Bradesco,60.746.948/0001-12,Bancos,18.73,9.12,,12.14,,7.40,0.01897481,5.34
+FUNDOS IMOBILIARIOS,CPTS11,Capitania Securities II,18.979.895/0001-13,Titulos e Valores Mobiliarios,7.54,,0.85,,,12.81,0.09,11.63
+ACOES,PETR4,Petroleo Brasileiro S.A.,33.000.167/0001-01,Petroleo Brasileiro,32.18,5.00,,19.38,1.81,17.38,0.13,17.98
+FUNDOS IMOBILIARIOS,MXRF11,Maxi Renda,97.521.225/0001-25,Hibrido,9.66,,1.02,,,12.15,0.10,11.93
+ACOES,BPAC11,Banco BTG Pactual,30.306.294/0001-45,Banco,50.59,14.42,,21.02,,2.10,0.60400687,2.09
+FUNDOS IMOBILIARIOS,HGLG11,Patria Log,11.728.688/0001-47,Logistica/ Industria/ Galpoes,158.10,,0.97,,,8.36,1.10,8.29
+FUNDOS IMOBILIARIOS,VGIR1,Valora RE III,29.852.732/0001-91,Titulos e Valores Mobiliarios,9.49,,0.97,,,15.11,0.13,13.80
+FUNDOS IMOBILIARIOS,RBRY11,RBR Private Credito Imobiliario,30.166.700/0001-11,Titulos e Valores Mobiliarios,96.39,,0.97,,,13.49,1.25,13.07
+FUNDOS IMOBILIARIOS,XPML11,XP Malls,28.757.546/0001-00,Shoppings / Varejo,106.59,,0.95,,,10.35,0.92,9.08

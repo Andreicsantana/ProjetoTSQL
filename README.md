@@ -26,7 +26,7 @@ Este projeto tem como objetivo criar uma **Carteira Referencial de Investimentos
 ## ❓ Perguntas-Chave
 
 ### 📊 1. Composição da Carteira
-- Quais são os ativos presentes e o peso (%) de cada um?  
+- Quais são os ativos presentes e o peso (%) de cada um?
 - Qual é a **distribuição setorial** (bancos, energia, consumo, etc.)?  
 - Qual o **preço atual** de cada ativo?  
 - Qual o **valor total investido** por ativo e o **total da carteira**?

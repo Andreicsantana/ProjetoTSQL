@@ -1,0 +1,4 @@
+nome;setor;preco_atual;tipo;rentabilidade_anual;vencimento;liquidez;emissor
+Tesouro Selic 2028;Renda Fixa;1000.00;Título Público;10.75;01/03/2028;Diária;Governo Federal
+CDB Liquidez Diária 100% CDI;Renda Fixa;1000.00;CDB;14.90;01/11/2026;Diária;Banco Inter
+LCI Banco XYZ;Renda Fixa;1000.00;LCI;12.00;15/05/2027;90 dias;Banco XYZ

@@ -1,0 +1,10 @@
+alerta_id,carteira_id,ativo_id,condicao,data_criacao
+1,1,1,BBAS3 variacao > 5%,2025-01-02
+2,2,2,BBDC4 variacao > 5%,2025-01-02
+3,3,3,CPTS11 variacao > 5%,2025-01-02
+4,4,4,HGLG11 variacao > 5%,2025-01-02
+5,5,5,MXRF11 variacao > 5%,2025-01-02
+6,6,6,PETR4 variacao > 5%,2025-01-02
+7,7,7,RBRY11 variacao > 5%,2025-01-02
+8,8,8,VGIR11 variacao > 5%,2025-01-02
+9,9,9,XPML11 variacao > 5%,2025-01-02

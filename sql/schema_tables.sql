@@ -24,8 +24,10 @@ CREATE TABLE Empresas (
 CREATE TABLE Ativos (
     ativo_id INT IDENTITY(1,1) PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
-    setor VARCHAR(100),
-    preco_atual DECIMAL(18,2)
+    setor_id INT NULL,
+    preco_atual DECIMAL(18,2),
+    CONSTRAINT fk_ativo_setor FOREIGN KEY (setor_id)
+        REFERENCES Setores(setor_id)
 );
 
 CREATE TABLE Carteira_Definicao (
