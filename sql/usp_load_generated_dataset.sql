@@ -8,7 +8,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.usp_LoadGeneratedDataset
-    @BasePath NVARCHAR(4000) = N'/var/generated_dataset',
+    @BasePath NVARCHAR(4000) = N'/var/generated_dataset_utf8',
     @ForceLegacyCsv BIT = NULL
 AS
 BEGIN
