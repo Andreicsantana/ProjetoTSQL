@@ -2,7 +2,7 @@
 
 ## 🔄 Backup
 - [Backup Drive](https://drive.google.com/file/d/11fg1deNgsxlBHNufpMC6par5jU3o_PXU/view?usp=drive_link)
-- [Backup Caminho Git](https://github.com/Andreicsantana/ProjetoTSQL/tree/main/backup](https://github.com/Andreicsantana/ProjetoTSQL/blob/main/backup/TsqlProject.bak)
+- [Backup Caminho Git]
 
 ## 🧭 Descrição do Projeto
 Este projeto organiza um pequeno data warehouse financeiro em SQL Server para responder perguntas sobre uma **Carteira Referencial de Investimentos**. O foco principal é demonstrar como transformar arquivos CSV heterogêneos em um conjunto consistente de tabelas T-SQL e, a partir delas, gerar análises prontas para consumo.
