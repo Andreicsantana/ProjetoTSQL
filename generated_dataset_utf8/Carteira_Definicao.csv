@@ -1,2 +1,4 @@
 carteira_definicao_id,nome,data_referencia,origem
 1,Carteira Referencial,2025-01-31,Simulacao 30d
+2,Carteira Moderada,2025-02-28,Simulacao 60d
+3,Carteira Agressiva,2025-02-28,Projecao cenario altista
