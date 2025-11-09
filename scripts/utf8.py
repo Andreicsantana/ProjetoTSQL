@@ -1,8 +1,8 @@
 import os
 import chardet
 
-input_folder = "C:\\Repositorios\\ProjetoTSQL\\datasets\\dataset fundos imobiliarios"
-output_folder = "C:\\Repositorios\\ProjetoTSQL\\csvs_utf8_datasets_fundos_imobiliarios"
+input_folder = "C:\\Repositorios\\ProjetoTSQL\\generated_dataset"
+output_folder = "C:\\Repositorios\\ProjetoTSQL\\generated_dataset_utf8"
 
 os.makedirs(output_folder, exist_ok=True)
 

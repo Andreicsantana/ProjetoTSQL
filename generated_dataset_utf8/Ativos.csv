@@ -9,5 +9,5 @@ ativo_id,ticker,nome,setor_id,preco_atual
 8,VGIR11,VGIR11 - Valora RE III,5,9.49
 9,XPML11,XPML11 - XP Malls,8,106.59
 10,RF001,RF001 - Tesouro Selic 2028,6,1000.0
-11,RF002,RF002 - CDB Liquidez Diária 100% CDI,6,1000.0
+11,RF002,RF002 - CDB Liquidez Diaria 100% CDI,6,1000.0
 12,RF003,RF003 - LCI Banco XYZ,6,1000.0
