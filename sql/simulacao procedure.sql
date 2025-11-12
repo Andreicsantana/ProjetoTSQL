@@ -1,6 +1,9 @@
 USE TsqlProject;
 GO
 
+    
+  -- recebe os dados da simulação --
+	
 CREATE OR ALTER PROCEDURE usp_SimularInvestimento
 	@AtivoId INT,
 	@CarteiraDefinicaoId INT,
@@ -10,6 +13,8 @@ CREATE OR ALTER PROCEDURE usp_SimularInvestimento
 AS
 BEGIN
 	SET NOCOUNT ON;
+
+   --validação dos parâmetros--
 
 	IF @AtivoId IS NULL OR @AtivoId <= 0
 	BEGIN
@@ -29,7 +34,11 @@ BEGIN
 		RETURN;
 	END;
 
+    --define a data da operação--
+
 	SET @DataOperacao = COALESCE(@DataOperacao, CAST(GETDATE() AS DATE));
+
+   -- verifica ou cria a carteira --  
 
 	DECLARE @CarteiraId INT;
 	SELECT @CarteiraId = c.carteira_id
@@ -43,6 +52,8 @@ BEGIN
 		VALUES (@CarteiraDefinicaoId, @AtivoId, NULL, NULL, @ValorInvestido);
 		SET @CarteiraId = SCOPE_IDENTITY();
 	END;
+
+   -- busca o preço do ativo --
 
 	DECLARE @PrecoAbertura DECIMAL(18,4);
 	DECLARE @PrecoFechamento DECIMAL(18,4);
@@ -58,11 +69,16 @@ BEGIN
 
 	IF @PrecoAbertura IS NULL SET @PrecoAbertura = @PrecoFechamento;
 
+   -- quantidade comprada --
+
 	DECLARE @Quantidade DECIMAL(18,4) = CASE WHEN @PrecoFechamento IS NOT NULL AND @PrecoFechamento > 0
 											  THEN @ValorInvestido / @PrecoFechamento ELSE NULL END;
+   -- registra a transação --
 
 	INSERT INTO Transacoes (carteira_id, ativo_id, data, tipo, quantidade, preco)
 	VALUES (@CarteiraId, @AtivoId, @DataOperacao, @TipoTransacao, @Quantidade, @ValorInvestido);
+
+   -- atualiza o valor --
 
 	DECLARE @TotalCarteira DECIMAL(18,2);
 	SELECT @TotalCarteira = SUM(preco)
@@ -81,6 +97,8 @@ BEGIN
 	WHEN NOT MATCHED THEN
 		INSERT (carteira_id, data, valor_total)
 		VALUES (src.carteira_id, src.data, src.valor_total);
+    
+   -- calcula variação do ativo --
 
 	DECLARE @Variacao DECIMAL(18,4);
 	IF @PrecoAbertura IS NOT NULL AND @PrecoAbertura > 0 AND @PrecoFechamento IS NOT NULL
@@ -88,6 +106,8 @@ BEGIN
 
 	DECLARE @LimiteAlta DECIMAL(18,4) = 5.0;
 	DECLARE @LimiteBaixa DECIMAL(18,4) = -5.0;
+
+   -- gera alertas e riscos --
 
 	IF @Variacao IS NOT NULL
 	BEGIN
@@ -116,6 +136,8 @@ BEGIN
 		END;
 	END;
 
+   -- calcula retorno da carteira --
+
 	DECLARE @ValorAnterior DECIMAL(18,2);
 	SELECT TOP (1) @ValorAnterior = valor_total
 	FROM Carteira_Historico
@@ -127,6 +149,8 @@ BEGIN
 		SET @RetornoCarteira = ROUND(((@TotalCarteira - @ValorAnterior) / @ValorAnterior) * 100, 2);
 	ELSE IF @Variacao IS NOT NULL
 		SET @RetornoCarteira = ROUND(@Variacao, 2);
+
+   -- compara com benchmarks --
 
 	DECLARE @Benchmarks TABLE (Nome NVARCHAR(100));
 	INSERT INTO @Benchmarks (Nome) VALUES ('ISEE'), ('BVSP');
